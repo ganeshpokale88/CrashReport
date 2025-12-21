@@ -1,0 +1,60 @@
+MIT License
+
+Copyright (c) 2024 CrashReporter Developer
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+This software is free to use, modify, and distribute. When using this library,
+please include attribution to the original developer in your application's
+credits, about page, or documentation.
+
+---
+
+## HIPAA Compliance Disclaimer
+
+**IMPORTANT: This library is NOT fully HIPAA compliant.**
+
+While this library includes security features such as encryption, data sanitization,
+and secure key storage, it does NOT yet meet all HIPAA requirements. Missing
+features include audit logging, user consent mechanisms, certificate pinning,
+and breach detection.
+
+**YOU MUST VERIFY COMPLIANCE** before using this library in HIPAA-regulated
+environments. The library developer assumes NO liability for HIPAA violations,
+security breaches, or compliance failures.
+
+**Security Benefits:**
+- Data is sent to YOUR server, not a third party
+- You maintain full control over crash data
+- No vendor lock-in or data sharing with external services
+
+**Verification Required:**
+- Review HIPAA compliance checklist before use (library-side only)
+- Verify your server implementation meets HIPAA requirements (your responsibility)
+- Consult with legal/compliance experts
+- Test thoroughly in your environment
+
+**Important:** This library only handles client-side security. Server-side compliance
+(BAA, server encryption, access controls, audit logging, etc.) is your responsibility
+and must be implemented separately on your server.
+
+Use of this library in healthcare/HIPAA applications is at your own risk.
+
