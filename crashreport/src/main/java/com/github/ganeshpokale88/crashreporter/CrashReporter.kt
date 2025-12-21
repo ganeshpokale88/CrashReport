@@ -437,7 +437,7 @@ class CrashReporter private constructor(private val applicationContext: Context)
             HeaderStorage.clearHeaders(appContext)
             
             // Also clear headers from current config if instance exists
-            INSTANCE?.let { instance ->
+            INSTANCE?.let {
                 val currentConfig = DependencyRegistry.getConfig()
                 if (currentConfig != null) {
                     // Create new config without headers
@@ -473,6 +473,15 @@ class CrashReporter private constructor(private val applicationContext: Context)
                     // Update with config without headers
                     updateConfiguration(configWithoutHeaders)
                 }
+            }
+        }
+        /**
+         * Reset the singleton instance for testing purposes.
+         */
+        @androidx.annotation.VisibleForTesting
+        fun reset() {
+            synchronized(this) {
+                INSTANCE = null
             }
         }
     }

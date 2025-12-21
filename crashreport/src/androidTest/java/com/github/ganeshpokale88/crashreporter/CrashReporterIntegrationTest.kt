@@ -4,20 +4,20 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.work.ListenableWorker
-import androidx.work.testing.TestListenableWorkerBuilder
-import androidx.work.testing.WorkManagerTestInitHelper
 import com.github.ganeshpokale88.crashreporter.database.CrashLogDao
 import com.github.ganeshpokale88.crashreporter.database.CrashLogDatabase
-import com.github.ganeshpokale88.crashreporter.worker.CrashLogWorker
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.junit.Assert.*
 import java.io.File
 
 /**
@@ -58,6 +58,10 @@ class CrashReporterIntegrationTest {
         database.close()
         // Clean up crash log files
         crashLogsDir.listFiles()?.forEach { it.delete() }
+        
+        // Reset singletons to ensure clean state for next test
+        CrashReporter.reset()
+        DependencyRegistry.reset()
     }
 
     @Test

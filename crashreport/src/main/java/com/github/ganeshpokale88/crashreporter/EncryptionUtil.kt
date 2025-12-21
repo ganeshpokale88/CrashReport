@@ -119,6 +119,7 @@ object EncryptionUtil {
     /**
      * Encrypt data using AES-256-GCM
      */
+    @JvmStatic
     fun encrypt(context: Context, data: String): String {
         val secretKey = getOrCreateKey(context)
         val cipher = Cipher.getInstance(TRANSFORMATION)
@@ -146,6 +147,7 @@ object EncryptionUtil {
     /**
      * Decrypt data using AES-256-GCM
      */
+    @JvmStatic
     fun decrypt(context: Context, encryptedData: String): String {
         val secretKey = getOrCreateKey(context)
         val combined = Base64.decode(encryptedData, Base64.NO_WRAP)

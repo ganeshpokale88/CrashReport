@@ -103,5 +103,15 @@ internal object DependencyRegistry {
     fun getConfig(): CrashReporterConfig? {
         return config
     }
+    /**
+     * Reset all dependencies for testing purposes.
+     */
+    @androidx.annotation.VisibleForTesting
+    fun reset() {
+        crashLogDao = null
+        crashReportApi = null
+        config = null
+        isInitialized = false
+    }
 }
 

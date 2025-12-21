@@ -18,6 +18,7 @@ object UploadWorkerScheduler {
     /**
      * Schedule the crash upload worker to upload crash logs from database to server
      */
+    @JvmStatic
     fun scheduleUploadWorker(context: Context) {
         try {
             // Constraints: Network is required for upload

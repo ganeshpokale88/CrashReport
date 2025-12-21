@@ -4,18 +4,17 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.work.WorkerParameters
+import androidx.work.testing.TestListenableWorkerBuilder
 import com.github.ganeshpokale88.crashreporter.database.CrashLogDao
 import com.github.ganeshpokale88.crashreporter.database.CrashLogDatabase
 import com.github.ganeshpokale88.crashreporter.worker.CrashLogWorker
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
+import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.junit.Assert.*
-import org.mockito.Mockito.mock
 import java.io.File
 
 /**
@@ -55,6 +54,7 @@ class CrashLogWorkerTest {
     fun tearDown() {
         database.close()
         crashLogsDir.listFiles()?.forEach { it.delete() }
+        DependencyRegistry.reset()
     }
 
     @Test
@@ -68,9 +68,8 @@ class CrashLogWorkerTest {
         val file = File(crashLogsDir, fileName)
         file.writeText(encryptedData)
         
-        // Create worker
-        val workerParams = mock(WorkerParameters::class.java)
-        val worker = CrashLogWorker(context, workerParams)
+        // Create worker using TestListenableWorkerBuilder
+        val worker = TestListenableWorkerBuilder<CrashLogWorker>(context).build()
         
         // Execute worker
         val result = worker.doWork()
@@ -110,9 +109,8 @@ class CrashLogWorkerTest {
             file.writeText(encryptedData)
         }
         
-        // Create worker
-        val workerParams = mock(WorkerParameters::class.java)
-        val worker = CrashLogWorker(context, workerParams)
+        // Create worker using TestListenableWorkerBuilder
+        val worker = TestListenableWorkerBuilder<CrashLogWorker>(context).build()
         
         // Execute worker
         val result = worker.doWork()
@@ -136,9 +134,8 @@ class CrashLogWorkerTest {
         // Ensure directory is empty
         crashLogsDir.listFiles()?.forEach { it.delete() }
         
-        // Create worker
-        val workerParams = mock(WorkerParameters::class.java)
-        val worker = CrashLogWorker(context, workerParams)
+        // Create worker using TestListenableWorkerBuilder
+        val worker = TestListenableWorkerBuilder<CrashLogWorker>(context).build()
         
         // Execute worker
         val result = worker.doWork()
@@ -152,4 +149,3 @@ class CrashLogWorkerTest {
         assertEquals("Should have no crash logs", 0, allLogs.size)
     }
 }
-

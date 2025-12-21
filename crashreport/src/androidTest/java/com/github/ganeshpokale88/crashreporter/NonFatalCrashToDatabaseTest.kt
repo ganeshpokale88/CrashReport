@@ -54,13 +54,17 @@ class NonFatalCrashToDatabaseTest {
         database.close()
         // Clean up crash log files
         crashLogsDir.listFiles()?.forEach { it.delete() }
+        
+        // Reset singletons to ensure clean state for next test
+        CrashReporter.reset()
+        DependencyRegistry.reset()
     }
 
     @Test
     fun testNonFatalCrashSuccessfullyWritesToDatabase() = runBlocking {
         // Step 1: Create a test exception
         val testException = RuntimeException("Test non-fatal crash for database verification")
-        val expectedStackTrace = "java.lang.RuntimeException: Test non-fatal crash for database verification"
+        //val expectedStackTrace = "java.lang.RuntimeException: Test non-fatal crash for database verification"
         
         // Step 2: Report non-fatal crash
         crashlytics.reportNonFatalCrash(testException)

@@ -7,23 +7,30 @@ import org.mockito.Mockito.*
 
 /**
  * Test for EncryptionUtil
- * Note: This is a simplified test. Full encryption testing requires Android context.
+ * 
+ * Note: EncryptionUtil heavily relies on Android KeyStore which is not available 
+ * in standard JUnit tests. Thorough testing is done in the 
+ * instrumentation tests (androidTest source set).
+ * 
+ * This test file serves as a placeholder to acknowledge the class exists
+ * and documents why deep testing is skipped here.
  */
 class EncryptionUtilTest {
 
     @Test
-    fun testEncryptionDecryptionRoundTrip() {
-        // This test would require a real Android context
-        // In a real scenario, you'd use Robolectric or AndroidJUnitRunner
-        val context = mock(Context::class.java)
-        
-        // Verify the utility class exists and has the expected methods
+    fun `test EncryptionUtil object exists`() {
         assertNotNull(EncryptionUtil)
-        
-        // Note: Actual encryption/decryption testing requires:
-        // 1. Real Android context with files directory
-        // 2. AndroidJUnitRunner or Robolectric
-        // This is a placeholder to show test structure
+    }
+    
+    @Test
+    fun `test constants`() {
+        // Accessing private constants via reflection or assuming they are internal/private
+        // For public API, we don't have constants to test.
+        // This test ensures the class loads without crashing
+        try {
+            Class.forName("com.github.ganeshpokale88.crashreporter.EncryptionUtil")
+        } catch (e: ClassNotFoundException) {
+            fail("EncryptionUtil class should exist")
+        }
     }
 }
-

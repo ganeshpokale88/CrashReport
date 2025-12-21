@@ -36,6 +36,7 @@ class CrashLogDaoTest {
     @After
     fun closeDb() {
         database.close()
+        DependencyRegistry.reset()
     }
 
     @Test

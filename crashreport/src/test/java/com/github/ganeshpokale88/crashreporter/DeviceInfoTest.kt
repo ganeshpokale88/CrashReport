@@ -10,7 +10,6 @@ class DeviceInfoTest {
 
     @Test
     fun testDeviceInfoStructure() {
-        // This is a unit test that verifies DeviceInfo data class structure
         val deviceInfo = DeviceInfo(
             androidVersion = "14",
             deviceMake = "Google",
@@ -21,5 +20,34 @@ class DeviceInfoTest {
         assertEquals("Google", deviceInfo.deviceMake)
         assertEquals("Pixel 7", deviceInfo.deviceModel)
     }
+    
+    @Test
+    fun testDeviceInfoEquality() {
+        val device1 = DeviceInfo(
+            androidVersion = "14",
+            deviceMake = "Google",
+            deviceModel = "Pixel 7"
+        )
+        
+        val device2 = DeviceInfo(
+            androidVersion = "14",
+            deviceMake = "Google",
+            deviceModel = "Pixel 7"
+        )
+        
+        assertEquals(device1, device2)
+        assertEquals(device1.hashCode(), device2.hashCode())
+    }
+    
+    @Test
+    fun testDeviceInfoToString() {
+        val deviceInfo = DeviceInfo(
+            androidVersion = "14",
+            deviceMake = "Google",
+            deviceModel = "Pixel 7"
+        )
+        
+        assertTrue(deviceInfo.toString().contains("Pixel 7"))
+        assertTrue(deviceInfo.toString().contains("Google"))
+    }
 }
-

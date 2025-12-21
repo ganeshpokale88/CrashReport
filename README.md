@@ -1,26 +1,33 @@
 # CrashReporter - Self-Hosted Android Crash Reporting Library
 
-**CrashReporter** is a self-contained, open-source Android crash reporting library with built-in HIPAA compliance features. Automatically captures, encrypts, and uploads crash reports to your own server. Perfect alternative to commercial crash reporting services for healthcare apps, enterprise applications, and privacy-conscious developers.
+> **CrashReporter** is a self-contained, open-source Android crash reporting library with built-in HIPAA compliance features. Automatically captures, encrypts, and uploads crash reports to your own server. Perfect alternative to commercial crash reporting services for healthcare apps, enterprise applications, and privacy-conscious developers.
 
-**What does CrashReporter do?** CrashReporter automatically captures both fatal and non-fatal crashes in Android applications, encrypts the crash data locally, stores it securely, and uploads it to your own server endpoint. It provides enterprise-grade crash analytics without relying on third-party cloud services.
+## What does CrashReporter do?
+CrashReporter automatically captures both **fatal and non-fatal** crashes in Android applications, encrypts the crash data locally, stores it securely, and uploads it to your own server endpoint. It provides **enterprise-grade crash analytics** without relying on third-party cloud services.
 
-**Keywords:** Android crash reporting, self-hosted crash analytics, HIPAA compliant crash reporting, commercial crash reporting alternative, Android error tracking, crash reporting library, open source crash reporting, healthcare app crash reporting, secure crash reporting, Android crash logging, custom crash reporting, privacy-first crash reporting, Android exception tracking, crash analytics library, self-hosted error tracking, Android crash monitoring, secure error reporting, HIPAA crash reporting, Android crash collection, enterprise crash reporting
+> **Keywords:** Android crash reporting, self-hosted crash analytics, HIPAA compliant crash reporting, commercial crash reporting alternative, Android error tracking, crash reporting library, open source crash reporting, healthcare app crash reporting, secure crash reporting, Android crash logging, custom crash reporting, privacy-first crash reporting, Android exception tracking, crash analytics library, self-hosted error tracking, Android crash monitoring, secure error reporting, HIPAA crash reporting, Android crash collection, enterprise crash reporting
 
-### What is CrashReporter?
+## What is CrashReporter?
+CrashReporter is an open-source, self-hosted Android crash reporting library that provides enterprise-grade crash analytics without relying on third-party services. Unlike commercial cloud-based crash reporting solutions, CrashReporter gives you **complete data ownership**, **built-in HIPAA compliance features**, and **zero subscription costs**.
 
-CrashReporter is an **open-source, self-hosted Android crash reporting library** that provides enterprise-grade crash analytics without relying on third-party services. Unlike commercial cloud-based crash reporting solutions, CrashReporter gives you complete data ownership, built-in HIPAA compliance features, and zero subscription costs.
+### 🎯 Best for:
+*   **Healthcare apps**
+*   **Enterprise applications**
+*   **Privacy-conscious developers**
+*   **Regulated industries**
+*   Anyone who wants **full control** over their crash data
 
-**Best for:** Healthcare apps, enterprise applications, privacy-conscious developers, regulated industries, and anyone who wants full control over their crash data.
+## How does CrashReporter work?
 
-**How does CrashReporter work?** 
-1. App crashes → Library captures stack trace and device info
-2. Data sanitized (if PHI sanitization enabled) → Removes sensitive information
-3. Encrypted and stored locally → AES-256-GCM encryption with Android Keystore
-4. Background worker processes → Moves to encrypted SQLCipher database
-5. Uploaded to your server → Via TLS 1.2+ with optional certificate pinning
-6. Auto-cleanup → Old logs deleted based on retention policy
+1.  **App crashes** → Library captures stack trace and device info
+2.  **Data sanitized** (if PHI sanitization enabled) → Removes sensitive information
+3.  **Encrypted and stored locally** → AES-256-GCM encryption with Android Keystore
+4.  **Background worker processes** → Moves to encrypted SQLCipher database
+5.  **Uploaded to your server** → Via TLS 1.2+ with optional certificate pinning
+6.  **Auto-cleanup** → Old logs deleted based on retention policy
 
-**Technology Stack:** Kotlin, WorkManager, Room Database, SQLCipher, Retrofit, OkHttp, Android Keystore, AES-256-GCM encryption
+### 🛠️ Technology Stack
+`Kotlin` • `WorkManager` • `Room Database` • `SQLCipher` • `Retrofit` • `OkHttp` • `Android Keystore` • `AES-256-GCM encryption`
 
 > 📖 **For detailed documentation**, see [README_LONG.md](README_LONG.md)
 
