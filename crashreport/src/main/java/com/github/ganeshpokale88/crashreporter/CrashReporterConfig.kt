@@ -4,99 +4,14 @@ package com.github.ganeshpokale88.crashreporter
  * Configuration class for CrashReporter library.
  * Allows users to configure base URL and headers for network requests.
  * 
- * Configuration can be set during initialization or updated later at runtime
- * (e.g., after user login when JWT token becomes available).
- * 
- * Example usage - During initialization:
- * ```kotlin
- * val config = CrashReporterConfig.Builder()
- *     .baseUrl("https://api.example.com")
- *     .addHeader("X-API-Key", "key456")
- *     .build()
- * 
- * CrashReporter.initialize(context, config)
- * ```
- * 
- * Example usage - Update after login:
- * ```kotlin
- * // After successful login
- * val newConfig = CrashReporterConfig.Builder()
- *     .baseUrl("https://api.example.com")
- *     .addHeader("Authorization", "Bearer $jwtToken")
- *     .addHeader("X-API-Key", "key456")
- *     .build()
- * 
- * CrashReporter.updateConfiguration(newConfig)
- * ```
+ * Configuration can be set during initialization or updated later at runtime.
  */
 data class CrashReporterConfig(
-    /**
-     * Base URL for the crash reporting API endpoint.
-     * Production: Must use HTTPS (e.g., "https://api.example.com").
-     * Development: HTTP allowed only for localhost (e.g., "http://10.0.2.2:8000" for emulator).
-     * HTTP in production will throw IllegalArgumentException.
-     * 
-     * Should not include the endpoint path (use apiEndpoint for that).
-     * Examples:
-     * - "https://api.example.com" ✅
-     * - "https://api.example.com/v1" ✅ (if you want version in base URL)
-     * - "https://api.example.com/crashes" ❌ (use apiEndpoint instead)
-     */
     val baseUrl: String,
-    
-    /**
-     * API endpoint path for uploading crash reports.
-     * Required: Must be provided for API calls to work.
-     * 
-     * Should start with "/" (e.g., "/crashes", "/api/crashes", "/v1/reports").
-     * Examples:
-     * - "/crashes"
-     * - "/api/crashes"
-     * - "/v1/reports"
-     * - "/crash-reports/upload"
-     */
     val apiEndpoint: String?,
-    
-    /**
-     * Map of headers to be added to all network requests
-     * Key: Header name, Value: Header value
-     */
     val headers: Map<String, String> = emptyMap(),
-    
-    /**
-     * Configuration for stack trace sanitization to remove PHI (Protected Health Information).
-     * If null, sanitization is disabled. For HIPAA compliance, provide a sanitization config.
-     * Default: null (sanitization disabled)
-     */
     val sanitizationConfig: StackTraceSanitizer.SanitizationConfig? = null,
-    
-    /**
-     * Data retention period in days.
-     * Crash logs older than this period will be automatically deleted from the database.
-     * Default: 90 days (HIPAA compliance recommendation).
-     * Set to 0 or negative to disable automatic deletion.
-     */
     val dataRetentionDays: Long = 90L,
-    
-    /**
-     * SSL Certificate pinning configuration.
-     * Map of hostname to list of SHA-256 certificate pins.
-     * Example: mapOf("api.example.com" to listOf("sha256/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="))
-     * 
-     * For certificate rotation, provide multiple pins per hostname.
-     * Pinning is disabled if null or empty.
-     * 
-     * To get SHA-256 pin of your certificate:
-     * ```bash
-     * openssl s_client -servername api.example.com -connect api.example.com:443 < /dev/null | \
-     *   openssl x509 -pubkey -noout | \
-     *   openssl pkey -pubin -outform der | \
-     *   openssl dgst -sha256 -binary | \
-     *   openssl enc -base64
-     * ```
-     * 
-     * Or use online tools: https://www.ssllabs.com/ssltest/
-     */
     val certificatePins: Map<String, List<String>>? = null
 ) {
     /**
@@ -156,17 +71,6 @@ data class CrashReporterConfig(
         
         /**
          * Set custom sanitization configuration.
-         * 
-         * @param patientNames List of patient names to redact (case-insensitive)
-         * @param customPatterns List of custom regex patterns to redact
-         * @param redactEmails Whether to redact email addresses (default: true)
-         * @param redactPhones Whether to redact phone numbers (default: true)
-         * @param redactSSNs Whether to redact SSNs (default: true)
-         * @param redactMRNs Whether to redact medical record numbers (default: true)
-         * @param redactUserPaths Whether to redact file paths containing user data (default: true)
-         * @param redactDates Whether to redact dates (default: false)
-         * @param redactCreditCards Whether to redact credit card numbers (default: true)
-         * @return Builder instance for method chaining
          */
         fun sanitizationConfig(
             patientNames: List<String> = emptyList(),
@@ -177,7 +81,46 @@ data class CrashReporterConfig(
             redactMRNs: Boolean = true,
             redactUserPaths: Boolean = true,
             redactDates: Boolean = false,
-            redactCreditCards: Boolean = true
+            redactCreditCards: Boolean = true,
+            redactIPAddresses: Boolean = true,
+            redactMACAddresses: Boolean = true,
+            redactUUIDs: Boolean = false,
+            redactDriversLicense: Boolean = true,
+            redactPassport: Boolean = true,
+            redactInsurancePolicy: Boolean = true,
+            redactAccountNumbers: Boolean = true,
+            redactAPIKeys: Boolean = true,
+            redactJWTTokens: Boolean = true,
+            redactAuthTokens: Boolean = true,
+            redactDBConnections: Boolean = true,
+            redactSensitiveURLs: Boolean = true,
+            redactZIPCodes: Boolean = false,
+            redactHealthPlanBeneficiary: Boolean = true,
+            redactDeviceIDs: Boolean = true,
+            redactBankAccounts: Boolean = true,
+            redactRoutingNumbers: Boolean = true,
+            redactISODates: Boolean = false,
+            redactPasswordFields: Boolean = true,
+            // New flags
+            redactCityNames: Boolean = true,
+            redactStateNames: Boolean = true,
+            redactCountryNames: Boolean = false,
+            redactStreetAddresses: Boolean = true,
+            redactCoordinates: Boolean = true,
+            redactAges: Boolean = true,
+            redactVehicleVIN: Boolean = true,
+            redactLicensePlateNumbers: Boolean = true,
+            redactBiometricTerms: Boolean = true,
+            redactNamedFiles: Boolean = true,
+            redactFreeTextPHI: Boolean = true,
+            redactOAuthTokens: Boolean = true,
+            redactRefreshTokens: Boolean = true,
+            redactSessionCookies: Boolean = true,
+            redactPrivateKeys: Boolean = true,
+            redactCertificates: Boolean = true,
+            redactAWSKeys: Boolean = true,
+            redactGCPKeys: Boolean = true,
+            redactAzureSecrets: Boolean = true
         ): Builder {
             this.sanitizationConfig = StackTraceSanitizer.SanitizationConfig(
                 patientNames = patientNames,
@@ -188,7 +131,45 @@ data class CrashReporterConfig(
                 redactMRNs = redactMRNs,
                 redactUserPaths = redactUserPaths,
                 redactDates = redactDates,
-                redactCreditCards = redactCreditCards
+                redactCreditCards = redactCreditCards,
+                redactIPAddresses = redactIPAddresses,
+                redactMACAddresses = redactMACAddresses,
+                redactUUIDs = redactUUIDs,
+                redactDriversLicense = redactDriversLicense,
+                redactPassport = redactPassport,
+                redactInsurancePolicy = redactInsurancePolicy,
+                redactAccountNumbers = redactAccountNumbers,
+                redactAPIKeys = redactAPIKeys,
+                redactJWTTokens = redactJWTTokens,
+                redactAuthTokens = redactAuthTokens,
+                redactDBConnections = redactDBConnections,
+                redactSensitiveURLs = redactSensitiveURLs,
+                redactZIPCodes = redactZIPCodes,
+                redactHealthPlanBeneficiary = redactHealthPlanBeneficiary,
+                redactDeviceIDs = redactDeviceIDs,
+                redactBankAccounts = redactBankAccounts,
+                redactRoutingNumbers = redactRoutingNumbers,
+                redactISODates = redactISODates,
+                redactPasswordFields = redactPasswordFields,
+                redactCityNames = redactCityNames,
+                redactStateNames = redactStateNames,
+                redactCountryNames = redactCountryNames,
+                redactStreetAddresses = redactStreetAddresses,
+                redactCoordinates = redactCoordinates,
+                redactAges = redactAges,
+                redactVehicleVIN = redactVehicleVIN,
+                redactLicensePlateNumbers = redactLicensePlateNumbers,
+                redactBiometricTerms = redactBiometricTerms,
+                redactNamedFiles = redactNamedFiles,
+                redactFreeTextPHI = redactFreeTextPHI,
+                redactOAuthTokens = redactOAuthTokens,
+                redactRefreshTokens = redactRefreshTokens,
+                redactSessionCookies = redactSessionCookies,
+                redactPrivateKeys = redactPrivateKeys,
+                redactCertificates = redactCertificates,
+                redactAWSKeys = redactAWSKeys,
+                redactGCPKeys = redactGCPKeys,
+                redactAzureSecrets = redactAzureSecrets
             )
             return this
         }
@@ -211,11 +192,9 @@ data class CrashReporterConfig(
          * Required for API calls to work.
          * 
          * @param endpoint Endpoint path (e.g., "/crashes", "/api/crashes", "/v1/reports").
-         *                 Should start with "/". Required - no default value.
          * @return Builder instance for method chaining
          */
         fun apiEndpoint(endpoint: String): Builder {
-            // Ensure endpoint starts with "/"
             this.apiEndpoint = if (endpoint.startsWith("/")) endpoint else "/$endpoint"
             return this
         }
@@ -231,9 +210,7 @@ data class CrashReporterConfig(
          * @throws IllegalStateException if baseUrl is not set
          */
         fun addCertificatePin(sha256Pin: String): Builder {
-            val url = baseUrl ?: throw IllegalStateException(
-                "Base URL must be set before adding certificate pins. Call baseUrl() first."
-            )
+            val url = baseUrl ?: throw IllegalStateException("Base URL must be set before adding certificate pins.")
             val hostname = extractHostname(url)
             certificatePins.getOrPut(hostname) { mutableListOf() }.add(sha256Pin)
             return this
@@ -261,9 +238,7 @@ data class CrashReporterConfig(
          * @throws IllegalStateException if baseUrl is not set
          */
         fun addCertificatePins(sha256Pins: List<String>): Builder {
-            val url = baseUrl ?: throw IllegalStateException(
-                "Base URL must be set before adding certificate pins. Call baseUrl() first."
-            )
+            val url = baseUrl ?: throw IllegalStateException("Base URL must be set before adding certificate pins.")
             val hostname = extractHostname(url)
             certificatePins.getOrPut(hostname) { mutableListOf() }.addAll(sha256Pins)
             return this
@@ -294,17 +269,9 @@ data class CrashReporterConfig(
             return this
         }
         
-        /**
-         * Build the configuration object
-         * @throws IllegalStateException if baseUrl or apiEndpoint is not set
-         */
         fun build(): CrashReporterConfig {
-            val url = baseUrl ?: throw IllegalStateException(
-                "Base URL is required. Call baseUrl() before build()"
-            )
-            val endpoint = apiEndpoint ?: throw IllegalStateException(
-                "API endpoint is required. Call apiEndpoint() before build()"
-            )
+            val url = baseUrl ?: throw IllegalStateException("Base URL is required.")
+            val endpoint = apiEndpoint ?: throw IllegalStateException("API endpoint is required.")
             val pins = if (certificatePins.isEmpty()) null else certificatePins.mapValues { it.value.toList() }
             return CrashReporterConfig(url, endpoint, headers.toMap(), sanitizationConfig, dataRetentionDays, pins)
         }
@@ -329,19 +296,12 @@ data class CrashReporterConfig(
             return CrashReporterConfig(baseUrl, endpoint, emptyMap(), sanitizationConfig, dataRetentionDays, certificatePins)
         }
         
-        /**
-         * Extract hostname from URL
-         */
         private fun extractHostname(url: String): String {
             return try {
-                val urlObj = java.net.URL(url)
-                urlObj.host
+                java.net.URL(url).host
             } catch (e: Exception) {
-                // Fallback: try to extract manually
-                val withoutProtocol = url.removePrefix("https://").removePrefix("http://")
-                withoutProtocol.split("/").first().split(":").first()
+                url.removePrefix("https://").removePrefix("http://").split("/").first().split(":").first()
             }
         }
     }
 }
-

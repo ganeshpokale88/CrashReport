@@ -12,6 +12,8 @@ package com.github.ganeshpokale88.crashreporter
  * - Driver's License Numbers
  * - Passport Numbers
  * - Patient names (configurable)
+ * - Ages (contextual)
+ * - Biometric terms
  * 
  * **Contact Information:**
  * - Email addresses
@@ -27,6 +29,11 @@ package com.github.ganeshpokale88.crashreporter
  * - API keys
  * - JWT tokens
  * - Authorization tokens (Bearer, Basic)
+ * - OAuth / Refresh tokens
+ * - Session cookies
+ * - Private Keys
+ * - Certificates
+ * - AWS / GCP / Azure secrets
  * - Password fields
  * 
  * **Network & Device Identifiers:**
@@ -38,13 +45,22 @@ package com.github.ganeshpokale88.crashreporter
  * - Health plan beneficiary numbers
  * - Insurance policy numbers
  * 
+ * **Location Data (Contextual/Best Effort):**
+ * - Coordinates (Lat/Long)
+ * - ZIP codes
+ * - Cities, States, Countries (Contextual)
+ * - Street Addresses (Contextual)
+ * 
+ * **Vehicle Data:**
+ * - VIN
+ * - License Plates
+ * 
  * **Other Sensitive Data:**
  * - Database connection strings
  * - URLs with sensitive query parameters
  * - File paths containing user data
- * - UUIDs (optional, can contain patient IDs)
- * - ZIP codes (optional, can be PHI in healthcare context)
- * - Dates (optional, might be birth dates)
+ * - UUIDs (optional)
+ * - Dates (optional)
  * 
  * **Custom Patterns:**
  * - Custom regex patterns via configuration
@@ -55,302 +71,128 @@ object StackTraceSanitizer {
     
     private const val REDACTED_PLACEHOLDER = "[REDACTED]"
     
-    // Regex patterns for common PHI patterns
-    private val ssnPattern = Regex(
-        """\b\d{3}-?\d{2}-?\d{4}\b""",  // XXX-XX-XXXX or XXXXXXXX
-        RegexOption.IGNORE_CASE
-    )
+    // --- Existing Patterns ---
+    private val ssnPattern = Regex("""\b\d{3}-?\d{2}-?\d{4}\b""", RegexOption.IGNORE_CASE)
+    private val emailPattern = Regex("""\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b""", RegexOption.IGNORE_CASE)
+    private val phonePattern = Regex("""\b(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b""", RegexOption.IGNORE_CASE)
+    private val medicalRecordNumberPattern = Regex("""\b(?:MRN|Medical Record|Record #)[:=\s]*[A-Z0-9-]{4,}\b""", RegexOption.IGNORE_CASE)
+    // Updated path pattern
+    private val userDataPathPattern = Regex("""(/[^\s/]+)*/(?:user|home|Users|patient|data|private|personal|documents|downloads|desktop)/[^\s]*""", RegexOption.IGNORE_CASE)
+    private val datePattern = Regex("""\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b""", RegexOption.IGNORE_CASE)
+    private val creditCardPattern = Regex("""\b(?:\d{4}[-.\s]?){3}\d{4}\b""", RegexOption.IGNORE_CASE)
+    private val ipv4Pattern = Regex("""\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b""")
+    private val ipv6Pattern = Regex("""\b([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}\b""")
+    private val macAddressPattern = Regex("""\b(?:[0-9A-Fa-f]{2}[:-]){5}(?:[0-9A-Fa-f]{2})\b""")
+    private val uuidPattern = Regex("""\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b""")
+    private val driversLicensePattern = Regex("""\b(?:DL|DLN|Driver['']?s?\s*License|License\s*#?)[:=\s]*[A-Z0-9]{5,15}\b""", RegexOption.IGNORE_CASE)
+    private val passportPattern = Regex("""\b(?:Passport|Passport\s*#?)[:=\s]*[A-Z0-9]{6,12}\b""", RegexOption.IGNORE_CASE)
+    private val insurancePolicyPattern = Regex("""\b(?:Policy|Policy\s*#?|Insurance\s*Policy|Ins\s*#?)[:=\s]*[A-Z0-9-]{6,20}\b""", RegexOption.IGNORE_CASE)
+    private val accountNumberPattern = Regex("""\b(?:Account|Acct|Account\s*#?|Acct\s*#?)[:=\s]*\d{6,20}\b""", RegexOption.IGNORE_CASE)
+    private val apiKeyPattern = Regex("""\b(?:api[_-]?key|apikey|api_key|access[_-]?key|secret[_-]?key)[:=\s]*['"]?[A-Za-z0-9_\-]{20,}['"]?\b""", RegexOption.IGNORE_CASE)
+    private val jwtTokenPattern = Regex("""\bgl-[\w-]+\b|eyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*\b""")
+    private val authTokenPattern = Regex("""\b(?:Bearer|Basic|Token|Authorization)[:\s]+[A-Za-z0-9_\-\.+/=]{20,}\b""", RegexOption.IGNORE_CASE)
+    private val dbConnectionPattern = Regex("""\b(?:jdbc|mongodb|postgresql|mysql|sqlite|redis)://[^\s]+""", RegexOption.IGNORE_CASE)
+    private val urlWithQueryPattern = Regex("""https?://[^\s]+[?&](?:token|key|password|secret|auth|session|user|email|phone|ssn|mrn|patient|id)=[^\s&]+""", RegexOption.IGNORE_CASE)
+    private val zipCodePattern = Regex("""\b(?:ZIP|Zip|Postal\s*Code|ZIP\s*Code)[:=\s]*\d{5}(?:-\d{4})?\b""", RegexOption.IGNORE_CASE)
+    private val healthPlanBeneficiaryPattern = Regex("""\b(?:Beneficiary|Beneficiary\s*#?|Health\s*Plan|Member\s*ID|Member\s*#?)[:=\s]*[A-Z0-9-]{6,20}\b""", RegexOption.IGNORE_CASE)
+    private val deviceIdPattern = Regex("""\b(?:IMEI|Serial\s*Number|Serial\s*#?|Device\s*ID|Device\s*Identifier|UDID)[:=\s]*[A-Z0-9-]{8,20}\b""", RegexOption.IGNORE_CASE)
+    private val bankAccountPattern = Regex("""\b(?:Bank\s*Account|Account\s*Number|Acct\s*Number)[:=\s]*\d{8,20}\b""", RegexOption.IGNORE_CASE)
+    private val routingNumberPattern = Regex("""\b(?:Routing|Routing\s*#?|ABA|RTN)[:=\s]*\d{9}\b""", RegexOption.IGNORE_CASE)
+    private val isoDatePattern = Regex("""\b\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z?)?\b""")
+    private val passwordFieldPattern = Regex("""\b(?:password|passwd|pwd|pass|secret)[:=\s]*['"]?[^\s'"]{4,}['"]?\b""", RegexOption.IGNORE_CASE)
+
+    // --- NEW PATTERNS ---
     
-    private val emailPattern = Regex(
-        """\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b""",
-        RegexOption.IGNORE_CASE
-    )
+    // Coordinates: Lat/Long (e.g., 37.7749, -122.4194) - Separate checks for Lat and Long for better matching
+    private val coordinatesPattern = Regex("""\b(?:Lat(?:itude)?|Lng|Lon(?:gitude)?|Coords?)[:=\s]*[-+]?\d{1,3}\.\d{3,}\b""", RegexOption.IGNORE_CASE)
     
-    private val phonePattern = Regex(
-        """\b(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b""",  // US phone numbers
-        RegexOption.IGNORE_CASE
-    )
+    // Ages: Contextual (e.g., "Age: 45", "45 years old")
+    private val agePattern = Regex("""\b(?:Age|Years\s*old)[:=\s]*\d{1,3}\b""", RegexOption.IGNORE_CASE)
     
-    private val medicalRecordNumberPattern = Regex(
-        """\b(?:MRN|Medical Record|Record #)[:=\s]*[A-Z0-9-]{4,}\b""",
-        RegexOption.IGNORE_CASE
-    )
+    // Vehicle VIN (17 chars, alphanumeric, excluding I, O, Q usually, but strictly 17 alphanumeric is safeish)
+    private val vinPattern = Regex("""\b[A-HJ-NPR-Z0-9]{17}\b""", RegexOption.IGNORE_CASE)
     
-    // Pattern for file paths that might contain user data
-    private val userDataPathPattern = Regex(
-        """(/[^\s/]+/)*(?:user|patient|data|private|personal|documents|downloads)[^\s]*""",
-        RegexOption.IGNORE_CASE
-    )
+    // License Plate (Contextual)
+    private val licensePlatePattern = Regex("""\b(?:License\s*Plate|Plate\s*Number|Vehicle\s*ID)[:=\s]*[A-Z0-9-]{4,10}\b""", RegexOption.IGNORE_CASE)
     
-    // Pattern for common date formats that might be birth dates
-    private val datePattern = Regex(
-        """\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b""",
-        RegexOption.IGNORE_CASE
-    )
+    // Biometric Terms (Contextual)
+    private val biometricPattern = Regex("""\b(?:Fingerprint|Face\s*ID|Touch\s*ID|Retina|Biometric|Iris)[:=\s]*[A-Za-z0-9+/=]{10,}\b""", RegexOption.IGNORE_CASE)
     
-    // Pattern for credit card numbers (16 digits)
-    private val creditCardPattern = Regex(
-        """\b\d{4}[-.\s]?\d{4}[-.\s]?\d{4}[-.\s]?\d{4}\b""",
-        RegexOption.IGNORE_CASE
-    )
+    // OAuth/Refresh Tokens / Session Cookies (Common formats)
+    private val oauthTokenPattern = Regex("""\b(?:access_token|refresh_token|session_id|JSESSIONID|PHPSESSID)[:=\s]*[A-Za-z0-9-._]+""", RegexOption.IGNORE_CASE)
     
-    // Pattern for IP addresses (IPv4)
-    private val ipv4Pattern = Regex(
-        """\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b"""
-    )
+    // Private Keys (PEM format)
+    private val privateKeyPattern = Regex("""-----BEGIN [A-Z ]+ PRIVATE KEY-----[\s\S]*?-----END [A-Z ]+ PRIVATE KEY-----""")
     
-    // Pattern for IP addresses (IPv6)
-    private val ipv6Pattern = Regex(
-        """\b(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}\b|::1|::ffff:\d+\.\d+\.\d+\.\d+"""
-    )
+    // Certificates (PEM format)
+    private val certificatePattern = Regex("""-----BEGIN CERTIFICATE-----[\s\S]*?-----END CERTIFICATE-----""")
     
-    // Pattern for MAC addresses
-    private val macAddressPattern = Regex(
-        """\b(?:[0-9A-Fa-f]{2}[:-]){5}(?:[0-9A-Fa-f]{2})\b"""
-    )
+    // Cloud Keys
+    // AWS: AKIA..., ASIA... (20 chars)
+    private val awsKeyPattern = Regex("""\b(AKIA|ASIA)[A-Z0-9]{16}\b""")
+    // Google API Key: AIza... (39 chars)
+    private val gcpKeyPattern = Regex("""\bAIza[0-9A-Za-z-_]{35}\b""")
+    // Azure SAS / Connection Strings (Contextual key=value)
+    private val azureSecretPattern = Regex("""\b(?:SharedAccessKey|AccountKey)=([A-Za-z0-9+/=]+)""", RegexOption.IGNORE_CASE)
     
-    // Pattern for UUIDs (can contain patient IDs)
-    private val uuidPattern = Regex(
-        """\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b"""
-    )
-    
-    // Pattern for driver's license numbers (US format - varies by state, common patterns)
-    private val driversLicensePattern = Regex(
-        """\b(?:DL|DLN|Driver['']?s?\s*License|License\s*#?)[:=\s]*[A-Z0-9]{5,15}\b""",
-        RegexOption.IGNORE_CASE
-    )
-    
-    // Pattern for passport numbers
-    private val passportPattern = Regex(
-        """\b(?:Passport|Passport\s*#?)[:=\s]*[A-Z0-9]{6,12}\b""",
-        RegexOption.IGNORE_CASE
-    )
-    
-    // Pattern for insurance policy numbers
-    private val insurancePolicyPattern = Regex(
-        """\b(?:Policy|Policy\s*#?|Insurance\s*Policy|Ins\s*#?)[:=\s]*[A-Z0-9-]{6,20}\b""",
-        RegexOption.IGNORE_CASE
-    )
-    
-    // Pattern for account numbers (generic)
-    private val accountNumberPattern = Regex(
-        """\b(?:Account|Acct|Account\s*#?|Acct\s*#?)[:=\s]*\d{6,20}\b""",
-        RegexOption.IGNORE_CASE
-    )
-    
-    // Pattern for API keys (common formats)
-    private val apiKeyPattern = Regex(
-        """\b(?:api[_-]?key|apikey|api_key|access[_-]?key|secret[_-]?key)[:=\s]*['"]?[A-Za-z0-9_\-]{20,}['"]?\b""",
-        RegexOption.IGNORE_CASE
-    )
-    
-    // Pattern for JWT tokens
-    private val jwtTokenPattern = Regex(
-        """\beyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*\b"""
-    )
-    
-    // Pattern for authorization tokens (Bearer, Basic, etc.)
-    private val authTokenPattern = Regex(
-        """\b(?:Bearer|Basic|Token|Authorization)[:\s]+[A-Za-z0-9_\-\.+/=]{20,}\b""",
-        RegexOption.IGNORE_CASE
-    )
-    
-    // Pattern for database connection strings
-    private val dbConnectionPattern = Regex(
-        """\b(?:jdbc|mongodb|postgresql|mysql|sqlite)[:;][^\s)]+""",
-        RegexOption.IGNORE_CASE
-    )
-    
-    // Pattern for URLs with query parameters (might contain sensitive data)
-    private val urlWithQueryPattern = Regex(
-        """https?://[^\s]+[?&](?:token|key|password|secret|auth|session|user|email|phone|ssn|mrn|patient|id)=[^\s&]+""",
-        RegexOption.IGNORE_CASE
-    )
-    
-    // Pattern for ZIP codes (can be PHI in healthcare context)
-    private val zipCodePattern = Regex(
-        """\b(?:ZIP|Zip|Postal\s*Code|ZIP\s*Code)[:=\s]*\d{5}(?:-\d{4})?\b""",
-        RegexOption.IGNORE_CASE
-    )
-    
-    // Pattern for health plan beneficiary numbers
-    private val healthPlanBeneficiaryPattern = Regex(
-        """\b(?:Beneficiary|Beneficiary\s*#?|Health\s*Plan|Member\s*ID|Member\s*#?)[:=\s]*[A-Z0-9-]{6,20}\b""",
-        RegexOption.IGNORE_CASE
-    )
-    
-    // Pattern for device identifiers (IMEI, serial numbers)
-    private val deviceIdPattern = Regex(
-        """\b(?:IMEI|Serial\s*Number|Serial\s*#?|Device\s*ID|Device\s*Identifier)[:=\s]*[A-Z0-9-]{8,20}\b""",
-        RegexOption.IGNORE_CASE
-    )
-    
-    // Pattern for bank account numbers
-    private val bankAccountPattern = Regex(
-        """\b(?:Bank\s*Account|Account\s*Number|Acct\s*Number)[:=\s]*\d{8,20}\b""",
-        RegexOption.IGNORE_CASE
-    )
-    
-    // Pattern for routing numbers (US bank routing)
-    private val routingNumberPattern = Regex(
-        """\b(?:Routing|Routing\s*#?|ABA|RTN)[:=\s]*\d{9}\b""",
-        RegexOption.IGNORE_CASE
-    )
-    
-    // Pattern for ISO date formats (might be DOB)
-    private val isoDatePattern = Regex(
-        """\b\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z?)?\b"""
-    )
-    
-    // Pattern for common password fields in logs
-    private val passwordFieldPattern = Regex(
-        """\b(?:password|passwd|pwd|secret)[:=\s]*['"]?[^\s'"]{4,}['"]?\b""",
-        RegexOption.IGNORE_CASE
-    )
-    
+    // Location Contextual (Best Effort for City/State/Street) - Less greedy, stop at comma or newline
+    private val addressContextPattern = Regex("""\b(?:Address|Street|City|State|Country|Zip)[:=\s]+[^,\n]+""", RegexOption.IGNORE_CASE)
+
     /**
      * Configuration for sanitization behavior
      */
     data class SanitizationConfig(
-        /**
-         * List of patient names to redact (case-insensitive)
-         */
         val patientNames: List<String> = emptyList(),
-        
-        /**
-         * List of custom regex patterns to redact
-         */
         val customPatterns: List<Regex> = emptyList(),
         
-        /**
-         * Whether to redact email addresses
-         */
+        // Existing Flags
         val redactEmails: Boolean = true,
-        
-        /**
-         * Whether to redact phone numbers
-         */
         val redactPhones: Boolean = true,
-        
-        /**
-         * Whether to redact SSNs
-         */
         val redactSSNs: Boolean = true,
-        
-        /**
-         * Whether to redact medical record numbers
-         */
         val redactMRNs: Boolean = true,
-        
-        /**
-         * Whether to redact file paths containing user data
-         */
         val redactUserPaths: Boolean = true,
-        
-        /**
-         * Whether to redact dates (may be birth dates)
-         */
-        val redactDates: Boolean = false,  // Default false as dates are common in logs
-        
-        /**
-         * Whether to redact credit card numbers
-         */
+        val redactDates: Boolean = false,
         val redactCreditCards: Boolean = true,
-        
-        /**
-         * Whether to redact IP addresses
-         */
         val redactIPAddresses: Boolean = true,
-        
-        /**
-         * Whether to redact MAC addresses
-         */
         val redactMACAddresses: Boolean = true,
-        
-        /**
-         * Whether to redact UUIDs (can contain patient IDs)
-         */
-        val redactUUIDs: Boolean = false,  // Default false as UUIDs are common in code
-        
-        /**
-         * Whether to redact driver's license numbers
-         */
+        val redactUUIDs: Boolean = false,
         val redactDriversLicense: Boolean = true,
-        
-        /**
-         * Whether to redact passport numbers
-         */
         val redactPassport: Boolean = true,
-        
-        /**
-         * Whether to redact insurance policy numbers
-         */
         val redactInsurancePolicy: Boolean = true,
-        
-        /**
-         * Whether to redact account numbers
-         */
         val redactAccountNumbers: Boolean = true,
-        
-        /**
-         * Whether to redact API keys and tokens
-         */
         val redactAPIKeys: Boolean = true,
-        
-        /**
-         * Whether to redact JWT tokens
-         */
         val redactJWTTokens: Boolean = true,
-        
-        /**
-         * Whether to redact authorization tokens
-         */
         val redactAuthTokens: Boolean = true,
-        
-        /**
-         * Whether to redact database connection strings
-         */
         val redactDBConnections: Boolean = true,
-        
-        /**
-         * Whether to redact URLs with sensitive query parameters
-         */
         val redactSensitiveURLs: Boolean = true,
-        
-        /**
-         * Whether to redact ZIP codes (can be PHI in healthcare)
-         */
-        val redactZIPCodes: Boolean = false,  // Default false as ZIP codes are common
-        
-        /**
-         * Whether to redact health plan beneficiary numbers
-         */
+        val redactZIPCodes: Boolean = false,
         val redactHealthPlanBeneficiary: Boolean = true,
-        
-        /**
-         * Whether to redact device identifiers (IMEI, serial numbers)
-         */
         val redactDeviceIDs: Boolean = true,
-        
-        /**
-         * Whether to redact bank account numbers
-         */
         val redactBankAccounts: Boolean = true,
-        
-        /**
-         * Whether to redact routing numbers
-         */
         val redactRoutingNumbers: Boolean = true,
+        val redactISODates: Boolean = false,
+        val redactPasswordFields: Boolean = true,
         
-        /**
-         * Whether to redact ISO date formats (might be DOB)
-         */
-        val redactISODates: Boolean = false,  // Default false as ISO dates are common in logs
-        
-        /**
-         * Whether to redact password fields
-         */
-        val redactPasswordFields: Boolean = true
+        // --- NEW FLAGS ---
+        val redactCityNames: Boolean = true,    
+        val redactStateNames: Boolean = true,   
+        val redactCountryNames: Boolean = false, 
+        val redactStreetAddresses: Boolean = true,
+        val redactCoordinates: Boolean = true,
+        val redactAges: Boolean = true,
+        val redactVehicleVIN: Boolean = true,
+        val redactLicensePlateNumbers: Boolean = true,
+        val redactBiometricTerms: Boolean = true,
+        val redactNamedFiles: Boolean = true, 
+        val redactFreeTextPHI: Boolean = true, 
+        val redactOAuthTokens: Boolean = true,
+        val redactRefreshTokens: Boolean = true,
+        val redactSessionCookies: Boolean = true,
+        val redactPrivateKeys: Boolean = true,
+        val redactCertificates: Boolean = true,
+        val redactAWSKeys: Boolean = true,
+        val redactGCPKeys: Boolean = true,
+        val redactAzureSecrets: Boolean = true
     )
     
     /**
@@ -366,153 +208,99 @@ object StackTraceSanitizer {
     ): String {
         var sanitized = stackTrace
         
-        // Redact SSNs
-        if (config.redactSSNs) {
-            sanitized = sanitized.replace(ssnPattern, REDACTED_PLACEHOLDER)
+        // 1. Long blocks / Keys / Certificates
+        if (config.redactPrivateKeys) sanitized = sanitized.replace(privateKeyPattern, REDACTED_PLACEHOLDER)
+        if (config.redactCertificates) sanitized = sanitized.replace(certificatePattern, REDACTED_PLACEHOLDER)
+        if (config.redactAWSKeys) sanitized = sanitized.replace(awsKeyPattern, REDACTED_PLACEHOLDER)
+        if (config.redactGCPKeys) sanitized = sanitized.replace(gcpKeyPattern, REDACTED_PLACEHOLDER)
+        if (config.redactAzureSecrets) {
+             sanitized = sanitized.replace(azureSecretPattern) { matchResult ->
+                 val fullMatch = matchResult.value
+                 val key = matchResult.groupValues[1]
+                 fullMatch.replace(key, REDACTED_PLACEHOLDER)
+             }
         }
         
-        // Redact email addresses
-        if (config.redactEmails) {
-            sanitized = sanitized.replace(emailPattern, REDACTED_PLACEHOLDER)
+        // 2. Tokens and Auth
+        if (config.redactAPIKeys) sanitized = sanitized.replace(apiKeyPattern, REDACTED_PLACEHOLDER)
+        if (config.redactJWTTokens) sanitized = sanitized.replace(jwtTokenPattern, REDACTED_PLACEHOLDER)
+        if (config.redactAuthTokens) sanitized = sanitized.replace(authTokenPattern, REDACTED_PLACEHOLDER)
+        if (config.redactOAuthTokens || config.redactRefreshTokens || config.redactSessionCookies) {
+            sanitized = sanitized.replace(oauthTokenPattern, REDACTED_PLACEHOLDER)
         }
         
-        // Redact phone numbers
-        if (config.redactPhones) {
-            sanitized = sanitized.replace(phonePattern, REDACTED_PLACEHOLDER)
-        }
+        // 3. Identifiers
+        if (config.redactSSNs) sanitized = sanitized.replace(ssnPattern, REDACTED_PLACEHOLDER)
+        if (config.redactEmails) sanitized = sanitized.replace(emailPattern, REDACTED_PLACEHOLDER)
+        if (config.redactPhones) sanitized = sanitized.replace(phonePattern, REDACTED_PLACEHOLDER)
+        if (config.redactCreditCards) sanitized = sanitized.replace(creditCardPattern, REDACTED_PLACEHOLDER)
+        if (config.redactVehicleVIN) sanitized = sanitized.replace(vinPattern, REDACTED_PLACEHOLDER)
+        if (config.redactDeviceIDs) sanitized = sanitized.replace(deviceIdPattern, REDACTED_PLACEHOLDER)
         
-        // Redact medical record numbers
-        if (config.redactMRNs) {
-            sanitized = sanitized.replace(medicalRecordNumberPattern, REDACTED_PLACEHOLDER)
-        }
+        // 4. Contextual PHI
+        if (config.redactMRNs) sanitized = sanitized.replace(medicalRecordNumberPattern, REDACTED_PLACEHOLDER)
+        if (config.redactAges) sanitized = sanitized.replace(agePattern, REDACTED_PLACEHOLDER)
+        if (config.redactDriversLicense) sanitized = sanitized.replace(driversLicensePattern, REDACTED_PLACEHOLDER)
+        if (config.redactPassport) sanitized = sanitized.replace(passportPattern, REDACTED_PLACEHOLDER)
+        if (config.redactInsurancePolicy) sanitized = sanitized.replace(insurancePolicyPattern, REDACTED_PLACEHOLDER)
+        if (config.redactLicensePlateNumbers) sanitized = sanitized.replace(licensePlatePattern, REDACTED_PLACEHOLDER)
+        if (config.redactBiometricTerms) sanitized = sanitized.replace(biometricPattern, REDACTED_PLACEHOLDER)
         
-        // Redact file paths containing user data
-        if (config.redactUserPaths) {
-            sanitized = sanitized.replace(userDataPathPattern, REDACTED_PLACEHOLDER)
-        }
-        
-        // Redact dates (optional, as they're common in logs)
-        if (config.redactDates) {
-            sanitized = sanitized.replace(datePattern, REDACTED_PLACEHOLDER)
-        }
-        
-        // Redact credit card numbers
-        if (config.redactCreditCards) {
-            sanitized = sanitized.replace(creditCardPattern, REDACTED_PLACEHOLDER)
-        }
-        
-        // Redact IP addresses (IPv4)
+        // 5. Financial
+        if (config.redactAccountNumbers) sanitized = sanitized.replace(accountNumberPattern, REDACTED_PLACEHOLDER)
+        if (config.redactBankAccounts) sanitized = sanitized.replace(bankAccountPattern, REDACTED_PLACEHOLDER)
+        if (config.redactRoutingNumbers) sanitized = sanitized.replace(routingNumberPattern, REDACTED_PLACEHOLDER)
+
+        // 6. Network
         if (config.redactIPAddresses) {
             sanitized = sanitized.replace(ipv4Pattern, REDACTED_PLACEHOLDER)
-        }
-        
-        // Redact IP addresses (IPv6)
-        if (config.redactIPAddresses) {
             sanitized = sanitized.replace(ipv6Pattern, REDACTED_PLACEHOLDER)
         }
+        if (config.redactMACAddresses) sanitized = sanitized.replace(macAddressPattern, REDACTED_PLACEHOLDER)
+        if (config.redactDBConnections) sanitized = sanitized.replace(dbConnectionPattern, REDACTED_PLACEHOLDER)
+        if (config.redactSensitiveURLs) sanitized = sanitized.replace(urlWithQueryPattern, REDACTED_PLACEHOLDER)
         
-        // Redact MAC addresses
-        if (config.redactMACAddresses) {
-            sanitized = sanitized.replace(macAddressPattern, REDACTED_PLACEHOLDER)
+        // 7. Files
+        if (config.redactUserPaths || config.redactNamedFiles) {
+            sanitized = sanitized.replace(userDataPathPattern, REDACTED_PLACEHOLDER)
+        }
+
+        // 8. Locations
+        if (config.redactCoordinates) sanitized = sanitized.replace(coordinatesPattern, REDACTED_PLACEHOLDER)
+        if (config.redactZIPCodes) sanitized = sanitized.replace(zipCodePattern, REDACTED_PLACEHOLDER)
+        
+        if (config.redactCityNames || config.redactStateNames || config.redactStreetAddresses || config.redactCountryNames) {
+            sanitized = sanitized.replace(addressContextPattern) { matchResult ->
+                val fullMatch = matchResult.value
+                val label = fullMatch.substringBefore(":").trim()
+                
+                var shouldRedact = false
+                if (config.redactCityNames && label.contains("City", ignoreCase = true)) shouldRedact = true
+                if (config.redactStateNames && label.contains("State", ignoreCase = true)) shouldRedact = true
+                if (config.redactCountryNames && label.contains("Country", ignoreCase = true)) shouldRedact = true
+                if (config.redactStreetAddresses && (label.contains("Address", ignoreCase = true) || label.contains("Street", ignoreCase = true))) shouldRedact = true
+                
+                if (shouldRedact) "$label: $REDACTED_PLACEHOLDER" else fullMatch
+            }
         }
         
-        // Redact UUIDs
-        if (config.redactUUIDs) {
-            sanitized = sanitized.replace(uuidPattern, REDACTED_PLACEHOLDER)
+        // 9. Generic
+        if (config.redactHealthPlanBeneficiary) sanitized = sanitized.replace(healthPlanBeneficiaryPattern, REDACTED_PLACEHOLDER)
+        if (config.redactPasswordFields) sanitized = sanitized.replace(passwordFieldPattern, REDACTED_PLACEHOLDER)
+        if (config.redactUUIDs) sanitized = sanitized.replace(uuidPattern, REDACTED_PLACEHOLDER)
+        if (config.redactDates || config.redactISODates) {
+             sanitized = sanitized.replace(datePattern, REDACTED_PLACEHOLDER)
+             sanitized = sanitized.replace(isoDatePattern, REDACTED_PLACEHOLDER)
         }
-        
-        // Redact driver's license numbers
-        if (config.redactDriversLicense) {
-            sanitized = sanitized.replace(driversLicensePattern, REDACTED_PLACEHOLDER)
-        }
-        
-        // Redact passport numbers
-        if (config.redactPassport) {
-            sanitized = sanitized.replace(passportPattern, REDACTED_PLACEHOLDER)
-        }
-        
-        // Redact insurance policy numbers
-        if (config.redactInsurancePolicy) {
-            sanitized = sanitized.replace(insurancePolicyPattern, REDACTED_PLACEHOLDER)
-        }
-        
-        // Redact account numbers
-        if (config.redactAccountNumbers) {
-            sanitized = sanitized.replace(accountNumberPattern, REDACTED_PLACEHOLDER)
-        }
-        
-        // Redact API keys
-        if (config.redactAPIKeys) {
-            sanitized = sanitized.replace(apiKeyPattern, REDACTED_PLACEHOLDER)
-        }
-        
-        // Redact JWT tokens
-        if (config.redactJWTTokens) {
-            sanitized = sanitized.replace(jwtTokenPattern, REDACTED_PLACEHOLDER)
-        }
-        
-        // Redact authorization tokens
-        if (config.redactAuthTokens) {
-            sanitized = sanitized.replace(authTokenPattern, REDACTED_PLACEHOLDER)
-        }
-        
-        // Redact database connection strings
-        if (config.redactDBConnections) {
-            sanitized = sanitized.replace(dbConnectionPattern, REDACTED_PLACEHOLDER)
-        }
-        
-        // Redact URLs with sensitive query parameters
-        if (config.redactSensitiveURLs) {
-            sanitized = sanitized.replace(urlWithQueryPattern, REDACTED_PLACEHOLDER)
-        }
-        
-        // Redact ZIP codes
-        if (config.redactZIPCodes) {
-            sanitized = sanitized.replace(zipCodePattern, REDACTED_PLACEHOLDER)
-        }
-        
-        // Redact health plan beneficiary numbers
-        if (config.redactHealthPlanBeneficiary) {
-            sanitized = sanitized.replace(healthPlanBeneficiaryPattern, REDACTED_PLACEHOLDER)
-        }
-        
-        // Redact device identifiers
-        if (config.redactDeviceIDs) {
-            sanitized = sanitized.replace(deviceIdPattern, REDACTED_PLACEHOLDER)
-        }
-        
-        // Redact bank account numbers
-        if (config.redactBankAccounts) {
-            sanitized = sanitized.replace(bankAccountPattern, REDACTED_PLACEHOLDER)
-        }
-        
-        // Redact routing numbers
-        if (config.redactRoutingNumbers) {
-            sanitized = sanitized.replace(routingNumberPattern, REDACTED_PLACEHOLDER)
-        }
-        
-        // Redact ISO date formats
-        if (config.redactISODates) {
-            sanitized = sanitized.replace(isoDatePattern, REDACTED_PLACEHOLDER)
-        }
-        
-        // Redact password fields
-        if (config.redactPasswordFields) {
-            sanitized = sanitized.replace(passwordFieldPattern, REDACTED_PLACEHOLDER)
-        }
-        
-        // Redact patient names (case-insensitive)
+
+        // 10. Custom
         config.patientNames.forEach { name ->
             if (name.isNotBlank()) {
-                val namePattern = Regex(
-                    """\b${Regex.escape(name)}\b""",
-                    RegexOption.IGNORE_CASE
-                )
+                val namePattern = Regex("""\b${Regex.escape(name)}\b""", RegexOption.IGNORE_CASE)
                 sanitized = sanitized.replace(namePattern, REDACTED_PLACEHOLDER)
             }
         }
         
-        // Apply custom patterns
         config.customPatterns.forEach { pattern ->
             sanitized = sanitized.replace(pattern, REDACTED_PLACEHOLDER)
         }
@@ -522,18 +310,6 @@ object StackTraceSanitizer {
     
     /**
      * Create a default HIPAA-compliant sanitization config.
-     * All PHI redaction is enabled by default.
-     * 
-     * This configuration redacts:
-     * - Personal identifiers (SSN, MRN, driver's license, passport)
-     * - Contact information (email, phone)
-     * - Financial information (credit cards, bank accounts, routing numbers)
-     * - Authentication tokens (API keys, JWT, auth tokens)
-     * - Network identifiers (IP addresses, MAC addresses)
-     * - Healthcare identifiers (health plan beneficiary numbers)
-     * - Device identifiers (IMEI, serial numbers)
-     * - Sensitive URLs and database connections
-     * - Password fields
      */
     fun createHipaaCompliantConfig(
         patientNames: List<String> = emptyList(),
@@ -542,33 +318,11 @@ object StackTraceSanitizer {
         return SanitizationConfig(
             patientNames = patientNames,
             customPatterns = customPatterns,
-            redactEmails = true,
-            redactPhones = true,
-            redactSSNs = true,
-            redactMRNs = true,
-            redactUserPaths = true,
-            redactDates = false,  // Keep false as dates are common in timestamps
-            redactCreditCards = true,
-            redactIPAddresses = true,
-            redactMACAddresses = true,
-            redactUUIDs = false,  // Keep false as UUIDs are common in code
-            redactDriversLicense = true,
-            redactPassport = true,
-            redactInsurancePolicy = true,
-            redactAccountNumbers = true,
-            redactAPIKeys = true,
-            redactJWTTokens = true,
-            redactAuthTokens = true,
-            redactDBConnections = true,
-            redactSensitiveURLs = true,
-            redactZIPCodes = false,  // Keep false as ZIP codes are common
-            redactHealthPlanBeneficiary = true,
-            redactDeviceIDs = true,
-            redactBankAccounts = true,
-            redactRoutingNumbers = true,
-            redactISODates = false,  // Keep false as ISO dates are common in logs
-            redactPasswordFields = true
+            redactDates = false,
+            redactUUIDs = false,
+            redactCountryNames = false,
+            redactZIPCodes = false,
+            redactISODates = false
         )
     }
 }
-
