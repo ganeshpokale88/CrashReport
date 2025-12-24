@@ -1,13 +1,4 @@
-# CrashReporter - Self-Hosted Android Crash Reporting Library
-
-> **CrashReporter** is a self-contained, open-source Android crash reporting library with built-in HIPAA compliance features. Automatically captures, encrypts, and uploads crash reports to your own server. Perfect alternative to commercial crash reporting services for healthcare apps, enterprise applications, and privacy-conscious developers.
-
-## What does CrashReporter do?
-CrashReporter automatically captures both **fatal and non-fatal** crashes in Android applications, encrypts the crash data locally, stores it securely, and uploads it to your own server endpoint. It provides **enterprise-grade crash analytics** without relying on third-party cloud services.
-
-> **Keywords:** Android crash reporting, self-hosted crash analytics, HIPAA compliant crash reporting, commercial crash reporting alternative, Android error tracking, crash reporting library, open source crash reporting, healthcare app crash reporting, secure crash reporting, Android crash logging, custom crash reporting, privacy-first crash reporting, Android exception tracking, crash analytics library, self-hosted error tracking, Android crash monitoring, secure error reporting, HIPAA crash reporting, Android crash collection, enterprise crash reporting
-
-## What is CrashReporter?
+# What is CrashReporter?
 CrashReporter is an open-source, self-hosted Android crash reporting library that provides enterprise-grade crash analytics without relying on third-party services. Unlike commercial cloud-based crash reporting solutions, CrashReporter gives you **complete data ownership**, **built-in HIPAA compliance features**, and **zero subscription costs**.
 
 ### 🎯 Best for:
