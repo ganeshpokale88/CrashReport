@@ -1,21 +1,104 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# App ProGuard Rules
+# The library's consumer-rules.pro is automatically applied
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# ============================================================================
+# Keep App-Specific Classes
+# ============================================================================
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# Keep app's main classes
+-keep class com.example.crashreportingdemo.** { *; }
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# ============================================================================
+# Hilt Application
+# ============================================================================
+
+-keep class * extends android.app.Application
+-keep @dagger.hilt.android.HiltAndroidApp class * { *; }
+
+# ============================================================================
+# Stack Traces
+# ============================================================================
+
+# Keep source file names for stack traces
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile
+
+# ============================================================================
+# Retrofit & OkHttp (Additional app-level rules)
+# ============================================================================
+
+-dontwarn retrofit2.**
+-dontwarn okhttp3.**
+-dontwarn okio.**
+
+# ============================================================================
+# Gson
+# ============================================================================
+
+-keepattributes Signature
+-keepattributes *Annotation*
+
+# ============================================================================
+# Kotlin
+# ============================================================================
+
+-keepattributes RuntimeVisibleAnnotations
+-keepattributes RuntimeInvisibleAnnotations
+
+# ============================================================================
+# Enum Classes
+# ============================================================================
+
+-keepclassmembers enum * {
+    public static **[] values();
+    public static ** valueOf(java.lang.String);
+}
+
+# ============================================================================
+# Warnings Suppression
+# ============================================================================
+
+-dontwarn org.conscrypt.**
+-dontwarn org.bouncycastle.**
+-dontwarn org.openjsse.**
+-dontwarn javax.annotation.**
+-dontwarn kotlin.**
+-dontwarn kotlinx.**
+
+# ============================================================================
+# Optimization Settings
+# ============================================================================
+
+# Enable optimization (required for -assumenosideeffects to work)
+-optimizations !code/simplification/arithmetic,!code/simplification/cast,!field/*,!class/merging/*
+-optimizationpasses 5
+-allowaccessmodification
+
+# ============================================================================
+# Remove Logging in Release Builds
+# ============================================================================
+
+# Remove all Log statements in release builds for security and performance
+# This MUST be in the app's proguard file for R8 to strip logs
+-assumenosideeffects class android.util.Log {
+    public static int v(...);
+    public static int d(...);
+    public static int i(...);
+    public static int w(...);
+    public static int e(...);
+    public static int wtf(...);
+    public static boolean isLoggable(java.lang.String, int);
+}
+
+# Remove println statements
+-assumenosideeffects class java.io.PrintStream {
+    public void println(...);
+    public void print(...);
+}
+
+# Remove printStackTrace() calls
+-assumenosideeffects class java.lang.Throwable {
+    public void printStackTrace();
+    public void printStackTrace(java.io.PrintStream);
+}
+
