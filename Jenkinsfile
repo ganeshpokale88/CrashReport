@@ -10,29 +10,30 @@ pipeline {
     }
 
     stages {
+
         stage('Checkout') {
             steps {
                 checkout scm
             }
         }
+
         stage('Setup Android SDK') {
             steps {
                 bat '''
-                echo sdk.dir=C:\\Users\\Ganesh Pokale\\AppData\\Local\\Android\\Sdk > local.properties
+                echo sdk.dir=C:\\Users\\ganes\\AppData\\Local\\Android\\Sdk > local.properties
                 '''
             }
         }
 
-
         stage('Build') {
             steps {
-                bat 'gradlew clean assemble'
+                bat 'gradlew clean assembleDebug'
             }
         }
 
         stage('Unit Tests') {
             steps {
-                bat 'gradlew test'
+                bat 'gradlew testDebugUnitTest'
             }
         }
     }
