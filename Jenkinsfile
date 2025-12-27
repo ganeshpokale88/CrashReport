@@ -6,6 +6,8 @@ pipeline {
     }
 
     environment {
+        ANDROID_HOME = "C:\\Android\\Sdk"
+        GRADLE_USER_HOME = "C:\\gradle-cache"
         GRADLE_OPTS = "-Dorg.gradle.daemon=false"
     }
 
@@ -20,14 +22,14 @@ pipeline {
         stage('Setup Android SDK') {
             steps {
                 bat '''
-                echo sdk.dir=C:\\Users\\ganes\\AppData\\Local\\Android\\Sdk > local.properties
+                echo sdk.dir=C:\\Android\\Sdk > local.properties
                 '''
             }
         }
 
         stage('Build') {
             steps {
-                bat 'gradlew clean assembleDebug'
+                bat 'gradlew clean assembleDebug --stacktrace'
             }
         }
 
