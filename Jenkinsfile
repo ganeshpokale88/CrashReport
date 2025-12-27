@@ -36,9 +36,15 @@ pipeline {
             }
         }
 
-        stage('Unit Tests') {
+        stage('Unit Tests App') {
             steps {
                 bat 'gradlew testDebugUnitTest'
+            }
+        }
+
+        stage('Unit Tests All') {
+            steps {
+                bat 'gradlew clean test'
             }
         }
     }

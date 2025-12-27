@@ -30,7 +30,9 @@
 }
 
 # Stack trace sanitizer - public utility
+# Note: Keep INSTANCE field for Kotlin object pattern (required for testing)
 -keep class com.github.ganeshpokale88.crashreporter.StackTraceSanitizer {
+    public static ** INSTANCE;
     public <methods>;
 }
 
@@ -294,6 +296,12 @@
 # Keep companion objects
 -keepclassmembers class * {
     public static ** Companion;
+}
+
+# Keep Kotlin object singletons (INSTANCE field)
+# Required for release unit tests to work correctly
+-keepclassmembers class com.github.ganeshpokale88.crashreporter.** {
+    public static ** INSTANCE;
 }
 
 # ============================================================================
