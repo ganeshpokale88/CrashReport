@@ -22,7 +22,9 @@ pipeline {
         stage('Setup Android SDK') {
             steps {
                 bat '''
-                echo sdk.dir=C:\\Android\\Sdk > local.properties
+                del local.properties 2>nul
+                echo sdk.dir=C:\\Android\\Sdk>local.properties
+                type local.properties
                 '''
             }
         }
