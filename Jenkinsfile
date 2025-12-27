@@ -6,8 +6,9 @@ pipeline {
     }
 
     environment {
-        ANDROID_HOME = "C:\\Android\\Sdk"
-        GRADLE_USER_HOME = "C:\\gradle-cache"
+        ANDROID_SDK_ROOT = "C:/Android/Sdk"
+        ANDROID_HOME = ""
+        GRADLE_USER_HOME = "C:/gradle-cache"
         GRADLE_OPTS = "-Dorg.gradle.daemon=false"
     }
 
@@ -23,7 +24,7 @@ pipeline {
             steps {
                 bat '''
                 del local.properties 2>nul
-                echo sdk.dir=C:\\Android\\Sdk>local.properties
+                echo sdk.dir=C:/Android/Sdk>local.properties
                 type local.properties
                 '''
             }
