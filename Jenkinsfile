@@ -15,6 +15,14 @@ pipeline {
                 checkout scm
             }
         }
+        stage('Setup Android SDK') {
+            steps {
+                bat '''
+                echo sdk.dir=C:\\Users\\Ganesh Pokale\\AppData\\Local\\Android\\Sdk > local.properties
+                '''
+            }
+        }
+
 
         stage('Build') {
             steps {
