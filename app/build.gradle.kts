@@ -30,7 +30,7 @@ android {
 
     signingConfigs {
         create("release") {
-            storeFile = rootProject.file("test")
+            storeFile = rootProject.file("testsign")
             storePassword = localProperties.getProperty("KEYSTORE_PASSWORD", "")
             keyAlias = localProperties.getProperty("KEY_ALIAS", "")
             keyPassword = localProperties.getProperty("KEY_PASSWORD", "")

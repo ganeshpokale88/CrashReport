@@ -38,6 +38,23 @@ internal object DependencyRegistry {
     }
     
     /**
+     * Initialize the registry with a CrashLogDao directly.
+     * This is primarily for testing purposes to avoid Room database mocking issues.
+     * API and config are optional - can be set later via updateApi()
+     */
+    @androidx.annotation.VisibleForTesting
+    fun initializeForTesting(
+        dao: CrashLogDao,
+        api: CrashReportApi? = null,
+        config: CrashReporterConfig? = null
+    ) {
+        crashLogDao = dao
+        crashReportApi = api
+        this.config = config
+        isInitialized = true
+    }
+    
+    /**
      * Update the API instance and configuration (for runtime updates)
      */
     fun updateApi(api: CrashReportApi, config: CrashReporterConfig) {

@@ -18,7 +18,7 @@ import com.github.ganeshpokale88.crashreporter.StackTraceSanitizer
  */
 
 //const val BASE_URL = "http://192.168.1.10:8000"
-const val BASE_URL = "http://10.0.2.2:8000"
+const val BASE_URL = "http://192.168.1.2:8000"
 class CrashReportingApplication : Application() {
 
     override fun onCreate() {
