@@ -449,7 +449,6 @@ class CrashReporter private constructor(private val applicationContext: Context)
                     // Add sanitization config if present
                     currentConfig.sanitizationConfig?.let { sanitizationConfig ->
                         builder.sanitizationConfig(
-                            patientNames = sanitizationConfig.patientNames,
                             customPatterns = sanitizationConfig.customPatterns,
                             redactEmails = sanitizationConfig.redactEmails,
                             redactPhones = sanitizationConfig.redactPhones,
