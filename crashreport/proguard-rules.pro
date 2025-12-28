@@ -30,7 +30,9 @@
 }
 
 # Stack trace sanitizer - public utility
+# Note: Keep INSTANCE field for Kotlin object pattern (required for testing)
 -keep class com.github.ganeshpokale88.crashreporter.StackTraceSanitizer {
+    public static ** INSTANCE;
     public <methods>;
 }
 
@@ -41,6 +43,30 @@
 
 -keep class com.github.ganeshpokale88.crashreporter.StackTraceSanitizer$Companion {
     public <methods>;
+}
+
+# DeviceInfo data class
+-keep class com.github.ganeshpokale88.crashreporter.DeviceInfo {
+    <init>(...);
+    <fields>;
+    <methods>;
+}
+
+# HeaderStorage
+-keep class com.github.ganeshpokale88.crashreporter.HeaderStorage {
+    <init>(...);
+    public <methods>;
+}
+
+# ============================================================================
+# Kotlin Data Classes
+# ============================================================================
+
+# Keep Kotlin data class generated methods (copy, componentN, etc.)
+-keepclassmembers class com.github.ganeshpokale88.crashreporter.** {
+    public ** component*();
+    public ** copy(...);
+    public ** copy$default(...);
 }
 
 # ============================================================================
@@ -87,7 +113,7 @@
 
 # Keep WorkerFactory
 -keep class com.github.ganeshpokale88.crashreporter.CrashReporterWorkerFactory {
-    <init>();
+    <init>(...);
     public <methods>;
 }
 
@@ -100,22 +126,63 @@
     <init>(...);
 }
 
+-keepclassmembers class * extends androidx.work.ListenableWorker {
+    <init>(...);
+}
+
 # ============================================================================
-# Retrofit & Gson
+# Retrofit & OkHttp
 # ============================================================================
 
+# Retrofit core
+-dontwarn retrofit2.**
+-keep class retrofit2.** { *; }
+-keepattributes Signature
+-keepattributes Exceptions
+-keepattributes RuntimeVisibleAnnotations
+-keepattributes RuntimeVisibleParameterAnnotations
+-keepattributes AnnotationDefault
+
 # Keep Retrofit API interfaces
--keep interface com.github.ganeshpokale88.crashreporter.api.** {
-    *;
+-keep,allowobfuscation interface * {
+    @retrofit2.http.* <methods>;
 }
+
+# Keep our specific API interface
+-keep interface com.github.ganeshpokale88.crashreporter.api.CrashReportApi { *; }
 
 # Keep API models (used for serialization)
 -keep class com.github.ganeshpokale88.crashreporter.api.model.** {
     <fields>;
     <init>(...);
+    <methods>;
 }
 
-# Gson annotations
+# Retrofit annotations
+-keepclassmembers,allowshrinking,allowobfuscation interface * {
+    @retrofit2.http.* <methods>;
+}
+
+# OkHttp
+-dontwarn okhttp3.**
+-dontwarn okio.**
+-keep class okhttp3.** { *; }
+-keep interface okhttp3.** { *; }
+-keep class okio.** { *; }
+
+# OkHttp internal classes
+-keepnames class okhttp3.internal.publicsuffix.PublicSuffixDatabase
+-dontwarn org.codehaus.mojo.animal_sniffer.*
+
+# OkHttp platform adapters
+-dontwarn org.conscrypt.**
+-dontwarn org.bouncycastle.**
+-dontwarn org.openjsse.**
+
+# ============================================================================
+# Gson
+# ============================================================================
+
 -keepattributes Signature
 -keepattributes *Annotation*
 -keepattributes EnclosingMethod
@@ -126,15 +193,19 @@
     @com.google.gson.annotations.SerializedName <fields>;
 }
 
-# Retrofit
--keepattributes Exceptions
--keepattributes RuntimeVisibleAnnotations
--keepattributes RuntimeVisibleParameterAnnotations
--keepattributes AnnotationDefault
-
--keepclassmembers,allowshrinking,allowobfuscation interface * {
-    @retrofit2.http.* <methods>;
+# Keep classes with @SerializedName
+-keep class * {
+    @com.google.gson.annotations.SerializedName <fields>;
 }
+
+# Gson TypeAdapters
+-keep class * extends com.google.gson.TypeAdapter
+-keep class * implements com.google.gson.TypeAdapterFactory
+-keep class * implements com.google.gson.JsonSerializer
+-keep class * implements com.google.gson.JsonDeserializer
+
+# Gson internal
+-dontwarn com.google.gson.internal.**
 
 # ============================================================================
 # Hilt Dependency Injection
@@ -149,6 +220,7 @@
 -keepattributes *Annotation*
 -keep class dagger.hilt.** { *; }
 -keep class javax.inject.** { *; }
+-dontwarn dagger.hilt.**
 
 # ============================================================================
 # Android Security Crypto (MasterKey, EncryptedFile)
@@ -161,6 +233,18 @@
 # Keep Android Keystore classes
 -keep class android.security.keystore.** { *; }
 -dontwarn android.security.keystore.**
+
+# Tink (used by AndroidX Security Crypto - EncryptedFile, MasterKey)
+-keep class com.google.crypto.tink.** { *; }
+-dontwarn com.google.crypto.tink.**
+-keepclassmembers class * extends com.google.crypto.tink.shaded.protobuf.GeneratedMessageLite {
+    <fields>;
+}
+
+# Protobuf Lite (used by Tink)
+-keep class * extends com.google.protobuf.GeneratedMessageLite { *; }
+-keep class * extends com.google.protobuf.GeneratedMessageV3 { *; }
+-dontwarn com.google.protobuf.**
 
 # ============================================================================
 # SQLCipher
@@ -199,6 +283,10 @@
 -keepattributes Exceptions
 -keepattributes InnerClasses
 -keepattributes EnclosingMethod
+-keepattributes RuntimeVisibleAnnotations
+-keepattributes RuntimeInvisibleAnnotations
+-keepattributes RuntimeVisibleParameterAnnotations
+-keepattributes RuntimeInvisibleParameterAnnotations
 
 # Keep Kotlin data classes used in public API
 -keepclassmembers class com.github.ganeshpokale88.crashreporter.** {
@@ -208,6 +296,12 @@
 # Keep companion objects
 -keepclassmembers class * {
     public static ** Companion;
+}
+
+# Keep Kotlin object singletons (INSTANCE field)
+# Required for release unit tests to work correctly
+-keepclassmembers class com.github.ganeshpokale88.crashreporter.** {
+    public static ** INSTANCE;
 }
 
 # ============================================================================
@@ -223,25 +317,28 @@
     *;
 }
 
+# Keep EncryptionUtil
+-keep class com.github.ganeshpokale88.crashreporter.EncryptionUtil {
+    *;
+}
+
+# Keep NetworkFactory
+-keep class com.github.ganeshpokale88.crashreporter.NetworkFactory {
+    *;
+}
+
+# Keep CrashLogProcessor
+-keep class com.github.ganeshpokale88.crashreporter.CrashLogProcessor {
+    *;
+}
+
 # ============================================================================
-# Security: Obfuscate Internal Implementation
+# Enum Classes
 # ============================================================================
 
-# Obfuscate internal implementation classes (not public API)
--assumenosideeffects class com.github.ganeshpokale88.crashreporter.EncryptionUtil {
-    private <methods>;
-}
-
--assumenosideeffects class com.github.ganeshpokale88.crashreporter.database.DatabaseKeyManager {
-    private <methods>;
-}
-
--assumenosideeffects class com.github.ganeshpokale88.crashreporter.NetworkFactory {
-    private <methods>;
-}
-
--assumenosideeffects class com.github.ganeshpokale88.crashreporter.CrashLogProcessor {
-    private <methods>;
+-keepclassmembers enum * {
+    public static **[] values();
+    public static ** valueOf(java.lang.String);
 }
 
 # ============================================================================
@@ -282,6 +379,8 @@
 -dontwarn org.conscrypt.**
 -dontwarn org.bouncycastle.**
 -dontwarn org.openjsse.**
+-dontwarn kotlin.**
+-dontwarn kotlinx.**
 
 # Optimization
 -optimizationpasses 5
@@ -310,9 +409,3 @@
     public void printStackTrace(java.io.PrintStream);
 }
 
-# ============================================================================
-# Consumer Rules (for library users)
-# ============================================================================
-
-# These rules will be applied to apps using this library
-# Keep public API accessible to consumers

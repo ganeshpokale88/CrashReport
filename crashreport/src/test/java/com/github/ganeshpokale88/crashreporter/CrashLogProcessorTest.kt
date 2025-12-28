@@ -69,11 +69,6 @@ class CrashLogProcessorTest {
         }
     }
 
-    @Ignore("Static mocking of EncryptionUtil proves flaky in this environment. Logic covered by instrumentation tests.")
-    @Test
-    fun `test processCrashLogs reads encrypts parses and inserts data`() = runTest(testDispatcher) {
-        // ... (Test code remains but ignored)
-    }
     
     @Test
     fun `test processCrashLogs ignores invalid files`() = runTest(testDispatcher) {

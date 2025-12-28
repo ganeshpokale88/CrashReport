@@ -58,8 +58,16 @@ internal object NetworkFactory {
             .setDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
             .create()
         
+        // Check if app is debuggable at runtime (works correctly for library)
+        val isDebuggable = (context.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0
+        
         val loggingInterceptor = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY // Change to NONE in production
+            // Only log HTTP traffic in debug builds - disable for release
+            level = if (isDebuggable) {
+                HttpLoggingInterceptor.Level.BODY
+            } else {
+                HttpLoggingInterceptor.Level.NONE
+            }
         }
         
         // Merge provided headers with persisted headers (from previous sessions)

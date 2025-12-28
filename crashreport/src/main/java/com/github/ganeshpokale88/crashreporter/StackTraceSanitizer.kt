@@ -112,8 +112,10 @@ object StackTraceSanitizer {
     // Vehicle VIN (17 chars, alphanumeric, excluding I, O, Q usually, but strictly 17 alphanumeric is safeish)
     private val vinPattern = Regex("""\b[A-HJ-NPR-Z0-9]{17}\b""", RegexOption.IGNORE_CASE)
     
-    // License Plate (Contextual)
-    private val licensePlatePattern = Regex("""\b(?:License\s*Plate|Plate\s*Number|Vehicle\s*ID)[:=\s]*[A-Z0-9-]{4,10}\b""", RegexOption.IGNORE_CASE)
+    // License Plate (Contextual) - Updated pattern to match various formats
+    private val licensePlatePattern = Regex("""(?:License\s*Plate|Plate\s*Number|Vehicle\s*ID)\s*[:=]?\s*[A-Z0-9-]{4,10}\b""", RegexOption.IGNORE_CASE)
+
+
     
     // Biometric Terms (Contextual)
     private val biometricPattern = Regex("""\b(?:Fingerprint|Face\s*ID|Touch\s*ID|Retina|Biometric|Iris)[:=\s]*[A-Za-z0-9+/=]{10,}\b""", RegexOption.IGNORE_CASE)

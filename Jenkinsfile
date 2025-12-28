@@ -36,9 +36,25 @@ pipeline {
             }
         }
 
+       /*  stage('Lint') {
+                    steps {
+                        bat 'gradlew lint'
+                    }
+        } */
+         stage('Connected Android Tests') {
+             steps {
+                 bat '''
+                 adb kill-server
+                 adb start-server
+                 adb devices
+                 gradlew connectedDebugAndroidTest --stacktrace
+                 '''
+             }
+         }
+
         stage('Unit Tests') {
             steps {
-                bat 'gradlew testDebugUnitTest'
+                bat 'gradlew clean test'
             }
         }
     }
