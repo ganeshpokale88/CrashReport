@@ -123,7 +123,6 @@ data class CrashReporterConfig(
             redactAzureSecrets: Boolean = true
         ): Builder {
             this.sanitizationConfig = StackTraceSanitizer.SanitizationConfig(
-                patientNames = patientNames,
                 customPatterns = customPatterns,
                 redactEmails = redactEmails,
                 redactPhones = redactPhones,

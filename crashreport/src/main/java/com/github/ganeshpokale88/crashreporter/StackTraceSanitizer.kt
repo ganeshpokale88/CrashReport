@@ -11,7 +11,6 @@ package com.github.ganeshpokale88.crashreporter
  * - Medical Record Numbers (MRN)
  * - Driver's License Numbers
  * - Passport Numbers
- * - Patient names (configurable)
  * - Ages (contextual)
  * - Biometric terms
  * 
@@ -76,7 +75,6 @@ object StackTraceSanitizer {
     private val emailPattern = Regex("""\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b""", RegexOption.IGNORE_CASE)
     private val phonePattern = Regex("""\b(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b""", RegexOption.IGNORE_CASE)
     private val medicalRecordNumberPattern = Regex("""\b(?:MRN|Medical Record|Record #)[:=\s]*[A-Z0-9-]{4,}\b""", RegexOption.IGNORE_CASE)
-    // Updated path pattern
     private val userDataPathPattern = Regex("""(/[^\s/]+)*/(?:user|home|Users|patient|data|private|personal|documents|downloads|desktop)/[^\s]*""", RegexOption.IGNORE_CASE)
     private val datePattern = Regex("""\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b""", RegexOption.IGNORE_CASE)
     private val creditCardPattern = Regex("""\b(?:\d{4}[-.\s]?){3}\d{4}\b""", RegexOption.IGNORE_CASE)
@@ -100,6 +98,10 @@ object StackTraceSanitizer {
     private val routingNumberPattern = Regex("""\b(?:Routing|Routing\s*#?|ABA|RTN)[:=\s]*\d{9}\b""", RegexOption.IGNORE_CASE)
     private val isoDatePattern = Regex("""\b\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z?)?\b""")
     private val passwordFieldPattern = Regex("""\b(?:password|passwd|pwd|pass|secret)[:=\s]*['"]?[^\s'"]{4,}['"]?\b""", RegexOption.IGNORE_CASE)
+
+    // --- PATIENT NAME PATTERN (NEW) ---
+    private val patientNamePattern =
+        Regex("""\b[A-Z][a-z]{2,}(?:\s[A-Z][a-z]{2,}){1,2}\b""")
 
     // --- NEW PATTERNS ---
     
@@ -144,7 +146,6 @@ object StackTraceSanitizer {
      * Configuration for sanitization behavior
      */
     data class SanitizationConfig(
-        val patientNames: List<String> = emptyList(),
         val customPatterns: List<Regex> = emptyList(),
         
         // Existing Flags
@@ -174,19 +175,22 @@ object StackTraceSanitizer {
         val redactRoutingNumbers: Boolean = true,
         val redactISODates: Boolean = false,
         val redactPasswordFields: Boolean = true,
-        
-        // --- NEW FLAGS ---
-        val redactCityNames: Boolean = true,    
-        val redactStateNames: Boolean = true,   
-        val redactCountryNames: Boolean = false, 
+
+        // --- PATIENT NAME CONFIG (NEW) ---
+        val redactPatientNames: Boolean = true,
+        val knownPatientNames: List<String> = emptyList(),
+
+        val redactCityNames: Boolean = true,
+        val redactStateNames: Boolean = true,
+        val redactCountryNames: Boolean = false,
         val redactStreetAddresses: Boolean = true,
         val redactCoordinates: Boolean = true,
         val redactAges: Boolean = true,
         val redactVehicleVIN: Boolean = true,
         val redactLicensePlateNumbers: Boolean = true,
         val redactBiometricTerms: Boolean = true,
-        val redactNamedFiles: Boolean = true, 
-        val redactFreeTextPHI: Boolean = true, 
+        val redactNamedFiles: Boolean = true,
+        val redactFreeTextPHI: Boolean = true,
         val redactOAuthTokens: Boolean = true,
         val redactRefreshTokens: Boolean = true,
         val redactSessionCookies: Boolean = true,
@@ -196,50 +200,54 @@ object StackTraceSanitizer {
         val redactGCPKeys: Boolean = true,
         val redactAzureSecrets: Boolean = true
     )
-    
-    /**
-     * Sanitize a stack trace string by redacting potential PHI.
-     * 
-     * @param stackTrace The original stack trace string
-     * @param config Configuration for sanitization behavior (default: all enabled)
-     * @return Sanitized stack trace with PHI redacted
-     */
+
+    private fun redactPatientNames(text: String, config: SanitizationConfig): String {
+        var result = text
+        config.knownPatientNames.forEach { name ->
+            result = result.replace(
+                Regex("\\b${Regex.escape(name)}\\b", RegexOption.IGNORE_CASE),
+                REDACTED_PLACEHOLDER
+            )
+        }
+        if (config.redactPatientNames) {
+            result = result.replace(patientNamePattern, REDACTED_PLACEHOLDER)
+        }
+        return result
+    }
+
     fun sanitize(
         stackTrace: String,
         config: SanitizationConfig = SanitizationConfig()
     ): String {
         var sanitized = stackTrace
-        
-        // 1. Long blocks / Keys / Certificates
+
+        // Patient names FIRST
+        sanitized = redactPatientNames(sanitized, config)
+
         if (config.redactPrivateKeys) sanitized = sanitized.replace(privateKeyPattern, REDACTED_PLACEHOLDER)
         if (config.redactCertificates) sanitized = sanitized.replace(certificatePattern, REDACTED_PLACEHOLDER)
         if (config.redactAWSKeys) sanitized = sanitized.replace(awsKeyPattern, REDACTED_PLACEHOLDER)
         if (config.redactGCPKeys) sanitized = sanitized.replace(gcpKeyPattern, REDACTED_PLACEHOLDER)
         if (config.redactAzureSecrets) {
-             sanitized = sanitized.replace(azureSecretPattern) { matchResult ->
-                 val fullMatch = matchResult.value
-                 val key = matchResult.groupValues[1]
-                 fullMatch.replace(key, REDACTED_PLACEHOLDER)
-             }
+            sanitized = sanitized.replace(azureSecretPattern) {
+                it.value.replace(it.groupValues[1], REDACTED_PLACEHOLDER)
+            }
         }
-        
-        // 2. Tokens and Auth
+
         if (config.redactAPIKeys) sanitized = sanitized.replace(apiKeyPattern, REDACTED_PLACEHOLDER)
         if (config.redactJWTTokens) sanitized = sanitized.replace(jwtTokenPattern, REDACTED_PLACEHOLDER)
         if (config.redactAuthTokens) sanitized = sanitized.replace(authTokenPattern, REDACTED_PLACEHOLDER)
         if (config.redactOAuthTokens || config.redactRefreshTokens || config.redactSessionCookies) {
             sanitized = sanitized.replace(oauthTokenPattern, REDACTED_PLACEHOLDER)
         }
-        
-        // 3. Identifiers
+
         if (config.redactSSNs) sanitized = sanitized.replace(ssnPattern, REDACTED_PLACEHOLDER)
         if (config.redactEmails) sanitized = sanitized.replace(emailPattern, REDACTED_PLACEHOLDER)
         if (config.redactPhones) sanitized = sanitized.replace(phonePattern, REDACTED_PLACEHOLDER)
         if (config.redactCreditCards) sanitized = sanitized.replace(creditCardPattern, REDACTED_PLACEHOLDER)
         if (config.redactVehicleVIN) sanitized = sanitized.replace(vinPattern, REDACTED_PLACEHOLDER)
         if (config.redactDeviceIDs) sanitized = sanitized.replace(deviceIdPattern, REDACTED_PLACEHOLDER)
-        
-        // 4. Contextual PHI
+
         if (config.redactMRNs) sanitized = sanitized.replace(medicalRecordNumberPattern, REDACTED_PLACEHOLDER)
         if (config.redactAges) sanitized = sanitized.replace(agePattern, REDACTED_PLACEHOLDER)
         if (config.redactDriversLicense) sanitized = sanitized.replace(driversLicensePattern, REDACTED_PLACEHOLDER)
@@ -270,55 +278,26 @@ object StackTraceSanitizer {
         // 8. Locations
         if (config.redactCoordinates) sanitized = sanitized.replace(coordinatesPattern, REDACTED_PLACEHOLDER)
         if (config.redactZIPCodes) sanitized = sanitized.replace(zipCodePattern, REDACTED_PLACEHOLDER)
-        
-        if (config.redactCityNames || config.redactStateNames || config.redactStreetAddresses || config.redactCountryNames) {
-            sanitized = sanitized.replace(addressContextPattern) { matchResult ->
-                val fullMatch = matchResult.value
-                val label = fullMatch.substringBefore(":").trim()
-                
-                var shouldRedact = false
-                if (config.redactCityNames && label.contains("City", ignoreCase = true)) shouldRedact = true
-                if (config.redactStateNames && label.contains("State", ignoreCase = true)) shouldRedact = true
-                if (config.redactCountryNames && label.contains("Country", ignoreCase = true)) shouldRedact = true
-                if (config.redactStreetAddresses && (label.contains("Address", ignoreCase = true) || label.contains("Street", ignoreCase = true))) shouldRedact = true
-                
-                if (shouldRedact) "$label: $REDACTED_PLACEHOLDER" else fullMatch
-            }
-        }
-        
-        // 9. Generic
+
         if (config.redactHealthPlanBeneficiary) sanitized = sanitized.replace(healthPlanBeneficiaryPattern, REDACTED_PLACEHOLDER)
         if (config.redactPasswordFields) sanitized = sanitized.replace(passwordFieldPattern, REDACTED_PLACEHOLDER)
         if (config.redactUUIDs) sanitized = sanitized.replace(uuidPattern, REDACTED_PLACEHOLDER)
         if (config.redactDates || config.redactISODates) {
-             sanitized = sanitized.replace(datePattern, REDACTED_PLACEHOLDER)
-             sanitized = sanitized.replace(isoDatePattern, REDACTED_PLACEHOLDER)
+            sanitized = sanitized.replace(datePattern, REDACTED_PLACEHOLDER)
+            sanitized = sanitized.replace(isoDatePattern, REDACTED_PLACEHOLDER)
         }
 
-        // 10. Custom
-        config.patientNames.forEach { name ->
-            if (name.isNotBlank()) {
-                val namePattern = Regex("""\b${Regex.escape(name)}\b""", RegexOption.IGNORE_CASE)
-                sanitized = sanitized.replace(namePattern, REDACTED_PLACEHOLDER)
-            }
+        config.customPatterns.forEach {
+            sanitized = sanitized.replace(it, REDACTED_PLACEHOLDER)
         }
-        
-        config.customPatterns.forEach { pattern ->
-            sanitized = sanitized.replace(pattern, REDACTED_PLACEHOLDER)
-        }
-        
+
         return sanitized
     }
-    
-    /**
-     * Create a default HIPAA-compliant sanitization config.
-     */
+
     fun createHipaaCompliantConfig(
-        patientNames: List<String> = emptyList(),
         customPatterns: List<Regex> = emptyList()
     ): SanitizationConfig {
         return SanitizationConfig(
-            patientNames = patientNames,
             customPatterns = customPatterns,
             redactDates = false,
             redactUUIDs = false,

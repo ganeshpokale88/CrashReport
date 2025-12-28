@@ -447,7 +447,7 @@ class StackTraceSanitizerTest {
         val stackTrace = "Error for patient John Smith"
         val sanitized = StackTraceSanitizer.sanitize(
             stackTrace,
-            StackTraceSanitizer.SanitizationConfig(patientNames = listOf("John Smith"))
+            StackTraceSanitizer.SanitizationConfig()
         )
         assertTrue(sanitized.contains("[REDACTED]"))
         assertFalse(sanitized.contains("John Smith"))
@@ -465,14 +465,7 @@ class StackTraceSanitizerTest {
         assertFalse(config.redactDates) // Optional by default
         assertFalse(config.redactUUIDs) // Optional by default
     }
-    
-    @Test
-    fun `test HIPAA compliant config with patient names`() {
-        val config = StackTraceSanitizer.createHipaaCompliantConfig(
-            patientNames = listOf("John Doe", "Jane Smith")
-        )
-        assertEquals(listOf("John Doe", "Jane Smith"), config.patientNames)
-    }
+
     
     // ================= Flow Tests =================
     

@@ -122,7 +122,6 @@ class CrashReportingApplication : Application() {
     private fun initializeHipaaCompliant() {
         // Create custom sanitization config
         val sanitizationConfig = StackTraceSanitizer.SanitizationConfig(
-            patientNames = listOf("John Doe", "Jane Smith"),  // Add known patient names
             customPatterns = listOf(
                 Regex("MRN-\\d+"),  // Custom pattern for medical record numbers
                 Regex("PATIENT-\\d+")  // Custom pattern for patient IDs
