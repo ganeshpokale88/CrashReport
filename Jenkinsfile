@@ -36,13 +36,13 @@ pipeline {
             }
         }
 
-        stage('Unit Tests App') {
-            steps {
-                bat 'gradlew testDebugUnitTest'
-            }
-        }
+       /*  stage('Lint') {
+                    steps {
+                        bat 'gradlew lint'
+                    }
+        } */
 
-        stage('Unit Tests All') {
+        stage('Unit Tests') {
             steps {
                 bat 'gradlew clean test'
             }
